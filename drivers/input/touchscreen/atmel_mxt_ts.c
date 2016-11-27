@@ -33,9 +33,6 @@
 #include <linux/notifier.h>
 #include <linux/fb.h>
 #endif
-#include <linux/input/sweep2wake.h>
-#include <linux/input/doubletap2wake.h>
-#include <linux/input/wake_helpers.h>
 
 /* Version */
 #define MXT_VER_20		20
@@ -1238,16 +1235,10 @@ static int mxt_do_diagnostic(struct mxt_data *data, u8 mode)
 static void mxt_set_t7_for_gesture(struct mxt_data *data, bool enable);
 static void mxt_set_gesture_wake_up(struct mxt_data *data, bool enable);
 
-static int mxt_prevent_sleep() {
-	if (in_phone_call())
-		return 0;
-
-	if (s2w_switch > 0 || dt2w_switch == 1)
-		return 1;
-	else
-		return 0;
+static int mxt_prevent_sleep(struct mxt_data *data) {
+	//If the device can support hardware gesture wakeup, dont bother preventing sleep
+	return data->hw_wakeup? 0 : data->wakeup_gesture_mode == MXT_INPUT_EVENT_WAKUP_MODE_ON;
 }
-
 
 static void mxt_proc_t100_messages(struct mxt_data *data, u8 *message)
 {
@@ -1352,7 +1343,7 @@ static void mxt_proc_t100_messages(struct mxt_data *data, u8 *message)
 		} else {
 			/* Touch no longer in detect, so close out slot */
 			if (data->touch_num == 0 &&
-				mxt_prevent_sleep() &&
+				mxt_prevent_sleep(data) &&
 				data->is_wakeup_by_gesture) {
 				dev_info(dev, "wakeup finger release, restore t7 and t8!\n");
 				data->is_wakeup_by_gesture = false;
@@ -4161,14 +4152,20 @@ static ssize_t  mxt_wakeup_mode_store(struct device *dev,
 	unsigned long val;
 	int error;
 
-	if (pdata->config_array[index].wake_up_self_adcx == 0)
-		return count;
+	dev_info(&data->client->dev, "~~ wakeup mode store = %s \n", buf);
+	dev_info(&data->client->dev, "~~ wakeup mode hw = %d \n", pdata->config_array[index].wake_up_self_adcx);
 
 	error = strict_strtoul(buf, 0, &val);
 
 	if (!error) {
 		data->wakeup_gesture_mode = (u8)val;
 		data->hw_wakeup = true;
+	}
+
+	//On devices without hardware wakeup  mode, we simply prevent screen going to sleep using this flag;
+	if (pdata->config_array[index].wake_up_self_adcx == 0){
+		data->hw_wakeup = false;
+		return count;
 	}
 
 	mxt_enable_gesture_mode(data);
@@ -4604,7 +4601,7 @@ static void mxt_start(struct mxt_data *data)
 	int error;
 	struct device *dev = &data->client->dev;
 
-	if (mxt_prevent_sleep() && data->is_stopped!=1) {
+	if (mxt_prevent_sleep(data) && data->is_stopped!=1) {
 		mxt_set_gesture_wake_up(data, false);
 		if (!data->is_wakeup_by_gesture)
 			mxt_set_t7_for_gesture(data, false);
@@ -4632,7 +4629,7 @@ static void mxt_stop(struct mxt_data *data)
 	int error;
 	struct device *dev = &data->client->dev;
 
-	if (mxt_prevent_sleep()) {
+	if (mxt_prevent_sleep(data)) {
 		data->is_wakeup_by_gesture = false;
 		mxt_set_t7_for_gesture(data, true);
 		mxt_set_gesture_wake_up(data, true);
@@ -4726,7 +4723,7 @@ static int mxt_suspend(struct device *dev)
 
 		mutex_unlock(&input_dev->mutex);
 	} else {
-		if (!mxt_prevent_sleep())
+		if (!mxt_prevent_sleep(data))
 			mxt_disable_irq(data);
 
 		mutex_lock(&input_dev->mutex);
@@ -5632,7 +5629,7 @@ static int mxt_ts_suspend(struct device *dev)
 	struct mxt_data *data =  dev_get_drvdata(dev);
 
 	if (device_may_wakeup(dev) &&
-			mxt_prevent_sleep()) {
+			mxt_prevent_sleep(data)) {
 		dev_info(dev, "touch enable irq wake\n");
 		mxt_disable_irq(data);
 		enable_irq_wake(data->client->irq);
@@ -5646,7 +5643,7 @@ static int mxt_ts_resume(struct device *dev)
 	struct mxt_data *data =  dev_get_drvdata(dev);
 
 	if (device_may_wakeup(dev) &&
-			mxt_prevent_sleep()) {
+			mxt_prevent_sleep(data)) {
 		dev_info(dev, "touch disable irq wake\n");
 		disable_irq_wake(data->client->irq);
 		mxt_enable_irq(data);
