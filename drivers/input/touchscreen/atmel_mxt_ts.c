@@ -4152,8 +4152,7 @@ static ssize_t  mxt_wakeup_mode_store(struct device *dev,
 	unsigned long val;
 	int error;
 
-	dev_info(&data->client->dev, "~~ wakeup mode store = %s \n", buf);
-	dev_info(&data->client->dev, "~~ wakeup mode hw = %d \n", pdata->config_array[index].wake_up_self_adcx);
+	dev_info(&data->client->dev, "wakeup mode store = %s, hw_wakeup = %d \n", buf, pdata->config_array[index].wake_up_self_adcx);
 
 	error = strict_strtoul(buf, 0, &val);
 
