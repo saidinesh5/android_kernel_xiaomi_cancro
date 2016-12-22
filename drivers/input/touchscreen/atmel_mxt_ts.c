@@ -1237,7 +1237,9 @@ static void mxt_set_gesture_wake_up(struct mxt_data *data, bool enable);
 
 static int mxt_prevent_sleep(struct mxt_data *data) {
 	//If the device can support hardware gesture wakeup, dont bother preventing sleep
-	return data->hw_wakeup? 0 : data->wakeup_gesture_mode == MXT_INPUT_EVENT_WAKUP_MODE_ON;
+	// TODO: Fix me, for Mi4/devices that actually support gesture wake
+	// return data->hw_wakeup? 0 : data->wakeup_gesture_mode == MXT_INPUT_EVENT_WAKUP_MODE_ON;
+	return data->wakeup_gesture_mode == MXT_INPUT_EVENT_WAKUP_MODE_ON;
 }
 
 static void mxt_proc_t100_messages(struct mxt_data *data, u8 *message)
@@ -4156,12 +4158,16 @@ static ssize_t  mxt_wakeup_mode_store(struct device *dev,
 
 	error = strict_strtoul(buf, 0, &val);
 
+	//FIXME: we are simply ignoring the hardware wakeup mode even on devices with hardware wakeup mode
 	if (!error) {
 		data->wakeup_gesture_mode = (u8)val;
-		data->hw_wakeup = true;
+		data->hw_wakeup = false;
+		return count;
+	}
+	else {
+		return error;
 	}
 
-	//On devices without hardware wakeup  mode, we simply prevent screen going to sleep using this flag;
 	if (pdata->config_array[index].wake_up_self_adcx == 0){
 		data->hw_wakeup = false;
 		return count;
