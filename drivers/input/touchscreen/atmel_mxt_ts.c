@@ -4872,11 +4872,11 @@ static int fb_notifier_cb(struct notifier_block *self,
 	if (evdata && evdata->data && event == FB_EVENT_BLANK && mxt_data) {
 		blank = evdata->data;
 		if (*blank == FB_BLANK_UNBLANK) {
-			dev_info(&mxt_data->client->dev, "##### UNBLANK SCREEN #####\n");
+			pr_debug("##### UNBLANK SCREEN #####\n");
 			mxt_data->screen_off = false;
 			mxt_input_enable(mxt_data->input_dev);
 		} else if (*blank == FB_BLANK_POWERDOWN) {
-			dev_info(&mxt_data->client->dev, "##### BLANK SCREEN #####\n");
+			pr_debug("##### BLANK SCREEN #####\n");
 			mxt_data->screen_off = true;
 			mxt_input_disable(mxt_data->input_dev);
 		}
@@ -5635,7 +5635,7 @@ static int mxt_ts_suspend(struct device *dev)
 
 	if (device_may_wakeup(dev) &&
 			mxt_prevent_sleep(data)) {
-		dev_info(dev, "touch enable irq wake\n");
+		pr_debug("touch enable irq wake\n");
 		mxt_disable_irq(data);
 		enable_irq_wake(data->client->irq);
 	}
@@ -5649,7 +5649,7 @@ static int mxt_ts_resume(struct device *dev)
 
 	if (device_may_wakeup(dev) &&
 			mxt_prevent_sleep(data)) {
-		dev_info(dev, "touch disable irq wake\n");
+		pr_debug("touch disable irq wake\n");
 		disable_irq_wake(data->client->irq);
 		mxt_enable_irq(data);
 	}

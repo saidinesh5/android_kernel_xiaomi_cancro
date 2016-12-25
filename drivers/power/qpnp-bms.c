@@ -2285,7 +2285,7 @@ skip_limits:
 	soc = soc_new;
 
 out:
-	pr_info("s %d i %d v %d ocv %d rbatt %d uuc %d cc %d r %d t %d f %d\n",
+	pr_debug("s %d i %d v %d ocv %d rbatt %d uuc %d cc %d r %d t %d f %d\n",
 		soc, ibat_ua, vbat_uv, chip->last_ocv_uv,
 		params->rbatt_mohm,
 		params->uuc_uah,
