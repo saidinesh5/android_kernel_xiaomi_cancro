@@ -253,6 +253,10 @@
 	qcom,wfd {
 		compatible = "qcom,msm-wfd";
 	};
+	qcom,ram-console{
+		compatible = "ram-console";
+	};
+
 
 	serial@f991f000 {
 		compatible = "qcom,msm-lsuart-v14";
